@@ -32,11 +32,12 @@
 , cacert
 , zip
 , fetchzip
+, fetchFromGitHub
 , sphinx
 }:
 let
   iso-codes-zip = stdenv.mkDerivation rec {
-    name = "iso-codes-zip";
+    pname = "iso-codes-zip";
     inherit (isocodes) src version;
     nativeBuildInputs = [ zip ];
     unpackPhase = "true";
@@ -44,9 +45,7 @@ let
       tar xzf ${src}
       zip main.zip $(tar tf ${src})
     '';
-    installPhase = ''
-      cp main.zip $out
-    '';
+    installPhase = "cp main.zip $out";
   };
   mathjax = fetchzip rec {
     pname = "MathJax";
@@ -60,12 +59,18 @@ let
     url = "https://github.com/liberationfonts/liberation-fonts/files/6026893/${pname}-${version}.tar.gz";
     sha256 = "sha256-fRaocdB9Y7WcOBGkn8p+O0KQI/Q3UxU7kOKEmw0zPGk=";
   };
-  hyphenation = fetchzip {
-    url = "https://github.com/LibreOffice/dictionaries/archive/libreoffice-7.6.5.2.tar.gz";
+  hyphenation = fetchFromGitHub {
+    owner = "LibreOffice";
+    repo = "dictionaries";
+    rev = "libreoffice-7.6.5.2";
     sha256 = "sha256-hGXumAvZXa5Rl/PANLsEV23YE50QjPmzA51DYKhvQBk=";
   };
-
-
+  translations = fetchFromGitHub {
+    owner = "kovidgoyal";
+    repo = "calibre-translations";
+    rev = "bce1a26a9be187e6daf57fb6548d3fc7ad5a709a";
+    sha256 = "sha256-2rMosLGcJNFQPlAjHI+ft+IApdsERdK4aVLgcrGShzc=";
+  };
 in
 
 stdenv.mkDerivation (finalAttrs: {
@@ -182,6 +187,7 @@ stdenv.mkDerivation (finalAttrs: {
     ISOCODE_ZIP = "${iso-codes-zip}";
     ISOCODE_VERSION = iso-codes-zip.version;
     CACERT = "${cacert}/etc/ssl/certs/ca-bundle.crt";
+    TRANSLATIONS = "${translations}";
   };
 
   buildPhase = ''
