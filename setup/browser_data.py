@@ -23,15 +23,9 @@ def filter_ans(ans):
 
 def common_user_agents():
     print('Getting recent UAs...')
-    ua_env = os.getenv('UA_POPULARITY')
-    if ua_env:
-        with open(ua_env, 'r') as f:
-            content = f.read()
-    else:
-        raw = download_from_calibre_server('https://code.calibre-ebook.com/ua-popularity')
-        content = bz2.decompress(raw).decode('utf-8')
+    raw = download_from_calibre_server('https://code.calibre-ebook.com/ua-popularity')
     ans = {}
-    for line in content.splitlines():
+    for line in bz2.decompress(raw).decode('utf-8').splitlines():
         count, ua = line.partition(':')[::2]
         count = int(count.strip())
         ua = ua.strip()

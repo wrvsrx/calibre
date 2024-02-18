@@ -170,9 +170,13 @@ class RecentUAs(Command):  # {{{
 
     def run(self, opts):
         from setup.browser_data import get_data
-        data = get_data()
-        with open(self.UA_PATH, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False, sort_keys=True)
+        ua_env = os.getenv('UA_POPULARITY')
+        if ua_env:
+            shutil.copy(ua_env, self.UA_PATH)
+        else:
+            data = get_data()
+            with open(self.UA_PATH, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False, sort_keys=True)
 # }}}
 
 
