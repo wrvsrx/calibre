@@ -683,6 +683,7 @@ requires-dist = "PyQt6 (>=6.2.1)"
 project-factory = "pyqtbuild:PyQtProject"
 
 [tool.sip.project]
+sip-include-dirs = [ "/nix/store/62fba2g233na88xqjj52pm17p4likk9s-python3.11-PyQt6-6.6.1/lib/python3.11/site-packages/PyQt6/bindings" ]
 sip-files-dir = "."
 {abi_version}
 

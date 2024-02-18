@@ -28,7 +28,45 @@
 , xdg-utils
 , wrapGAppsHook
 , unrarSupport ? false
+, isocodes
+, cacert
+, zip
+, fetchzip
+, sphinx
 }:
+let
+  iso-codes-zip = stdenv.mkDerivation rec {
+    name = "iso-codes-zip";
+    inherit (isocodes) src version;
+    nativeBuildInputs = [ zip ];
+    unpackPhase = "true";
+    buildPhase = ''
+      tar xzf ${src}
+      zip main.zip $(tar tf ${src})
+    '';
+    installPhase = ''
+      cp main.zip $out
+    '';
+  };
+  mathjax = fetchzip rec {
+    pname = "MathJax";
+    version = "3.1.4";
+    url = "https://github.com/mathjax/${pname}/archive/${version}.tar.gz";
+    hash = "sha256-viEg8xBUAsrMRH2m5fMXhcejMuN5bR+EntIGgP0Rb+c=";
+  };
+  liberation_fonts = fetchzip rec {
+    pname = "liberation-fonts-ttf";
+    version = "2.1.3";
+    url = "https://github.com/liberationfonts/liberation-fonts/files/6026893/${pname}-${version}.tar.gz";
+    sha256 = "sha256-fRaocdB9Y7WcOBGkn8p+O0KQI/Q3UxU7kOKEmw0zPGk=";
+  };
+  hyphenation = fetchzip {
+    url = "https://github.com/LibreOffice/dictionaries/archive/libreoffice-7.6.5.2.tar.gz";
+    sha256 = "sha256-hGXumAvZXa5Rl/PANLsEV23YE50QjPmzA51DYKhvQBk=";
+  };
+
+
+in
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "calibre";
@@ -52,8 +90,8 @@ stdenv.mkDerivation (finalAttrs: {
   ++ lib.optional (!unrarSupport) ./dont_build_unrar_plugin.patch;
 
   prePatch = ''
-    sed -i "s@\[tool.sip.project\]@[tool.sip.project]\nsip-include-dirs = [\"${python3Packages.pyqt6}/${python3Packages.python.sitePackages}/PyQt6/bindings\"]@g" \
-      setup/build.py
+    # sed -i "s@\[tool.sip.project\]@[tool.sip.project]\nsip-include-dirs = [\"${python3Packages.pyqt6}/${python3Packages.python.sitePackages}/PyQt6/bindings\"]@g" \
+    #   setup/build.py
 
     # Remove unneeded files and libs
     rm -rf src/odf resources/calibre-portable.*
@@ -69,6 +107,7 @@ stdenv.mkDerivation (finalAttrs: {
     removeReferencesTo
     wrapGAppsHook
     wrapQtAppsHook
+    sphinx
   ];
 
   buildInputs = [
@@ -131,31 +170,34 @@ stdenv.mkDerivation (finalAttrs: {
     ] ++ lib.optional (unrarSupport) unrardll
   );
 
-  shellHook = ''
-    export POPPLER_INC_DIR=${poppler_utils.dev}/include/poppler
-    export POPPLER_LIB_DIR=${poppler_utils.out}/lib
-    export MAGICK_INC=${imagemagick.dev}/include/ImageMagick
-    export MAGICK_LIB=${imagemagick.out}/lib
-    export FC_INC_DIR=${fontconfig.dev}/include/fontconfig
-    export FC_LIB_DIR=${fontconfig.lib}/lib
-    export PODOFO_INC_DIR=${podofo.dev}/include/podofo
-    export PODOFO_LIB_DIR=${podofo.lib}/lib
+  env = {
+    POPPLER_INC_DIR = "${poppler_utils.dev}/include/poppler";
+    POPPLER_LIB_DIR = "${poppler_utils.out}/lib";
+    MAGICK_INC = "${imagemagick.dev}/include/ImageMagick";
+    MAGICK_LIB = "${imagemagick.out}/lib";
+    FC_INC_DIR = "${fontconfig.dev}/include/fontconfig";
+    FC_LIB_DIR = "${fontconfig.lib}/lib";
+    PODOFO_INC_DIR = "${podofo.dev}/include/podofo";
+    PODOFO_LIB_DIR = "${podofo.lib}/lib";
+    ISOCODE_ZIP = "${iso-codes-zip}";
+    ISOCODE_VERSION = iso-codes-zip.version;
+    CACERT = "${cacert}/etc/ssl/certs/ca-bundle.crt";
+  };
+
+  buildPhase = ''
+    mkdir temp
+    cp "${cacert}/etc/ssl/certs/ca-bundle.crt" resources/mozilla-ca-certs.pem
+    ${python3Packages.python.pythonOnBuildForHost.interpreter} setup.py bootstrap \
+      --path-to-mathjax=${mathjax} \
+      --path-to-liberation_fonts=${liberation_fonts} \
+      --path-to-hyphenation=${hyphenation}
+    ${python3Packages.python.pythonOnBuildForHost.interpreter} setup.py man_pages
   '';
 
   installPhase = ''
     runHook preInstall
 
     export HOME=$TMPDIR/fakehome
-    export POPPLER_INC_DIR=${poppler_utils.dev}/include/poppler
-    export POPPLER_LIB_DIR=${poppler_utils.out}/lib
-    export MAGICK_INC=${imagemagick.dev}/include/ImageMagick
-    export MAGICK_LIB=${imagemagick.out}/lib
-    export FC_INC_DIR=${fontconfig.dev}/include/fontconfig
-    export FC_LIB_DIR=${fontconfig.lib}/lib
-    export PODOFO_INC_DIR=${podofo.dev}/include/podofo
-    export PODOFO_LIB_DIR=${podofo.lib}/lib
-    export XDG_DATA_HOME=$out/share
-    export XDG_UTILS_INSTALL_MODE="user"
 
     ${python3Packages.python.pythonOnBuildForHost.interpreter} setup.py install --root=$out \
       --prefix=$out \
@@ -209,9 +251,10 @@ stdenv.mkDerivation (finalAttrs: {
       free and open source and great for both casual users and computer experts.
     '';
     changelog = "https://github.com/kovidgoyal/calibre/releases/tag/v${finalAttrs.version}";
-    license = if unrarSupport
-              then lib.licenses.unfreeRedistributable
-              else lib.licenses.gpl3Plus;
+    license =
+      if unrarSupport
+      then lib.licenses.unfreeRedistributable
+      else lib.licenses.gpl3Plus;
     maintainers = with lib.maintainers; [ pSub ];
     platforms = lib.platforms.unix;
     broken = stdenv.isDarwin;
