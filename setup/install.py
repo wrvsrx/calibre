@@ -365,6 +365,7 @@ class Bootstrap(Command):
             help='Do not download all history for the translations. Speeds up first time download but subsequent downloads will be slower.')
 
     def pre_sub_commands(self, opts):
+        return
         tdir = self.j(self.d(self.SRC), 'translations')
         clone_cmd = [
             'git', 'clone', f'https://github.com/{self.TRANSLATIONS_REPO}.git', 'translations']

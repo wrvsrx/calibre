@@ -136,6 +136,7 @@ class CACerts(Command):  # {{{
     CA_PATH = os.path.join(Command.RESOURCES, 'mozilla-ca-certs.pem')
 
     def run(self, opts):
+        return
         try:
             with open(self.CA_PATH, 'rb') as f:
                 raw = f.read()
@@ -164,6 +165,7 @@ class RecentUAs(Command):  # {{{
     UA_PATH = os.path.join(Command.RESOURCES, 'user-agent-data.json')
 
     def run(self, opts):
+        return 
         from setup.browser_data import get_data
         data = get_data()
         with open(self.UA_PATH, 'w', encoding='utf-8') as f:
