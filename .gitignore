@@ -56,3 +56,5 @@
 /cmake-build-*
 /bypy/b
 /bypy/virtual-machines.conf
+
+/result
